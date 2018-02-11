@@ -2,6 +2,33 @@ from freenect import sync_get_depth as get_depth, sync_get_video as get_video
 from PIL import Image
 
 #Helper functions
+def generateColour(c1, c2, percent):
+    r = int((float(c2[0] - c1[0]) * percent) + float(c1[0]))
+    g = int((float(c2[1] - c1[1]) * percent) + float(c1[1]))
+    b = int((float(c2[2] - c1[2]) * percent) + float(c1[2]))
+    a = int((float(c2[3] - c1[3]) * percent) + float(c1[3]))
+    return (r, g, b, a)
+
+def logger(message, level=1):
+    front=""
+    if level ==0:
+        #Debug
+        front="\033[0;37m[0]\033[0;37m "
+    if level ==1:
+        #Info
+        front="\033[0;34m[+]\033[0;37m "
+    if level ==2:
+        #Warning
+        front="\033[0;33m[-]\033[0;37m "
+    if level ==3:
+        #Error
+        front="\033[0;31m[*]\033[0;37m "
+    if level ==4:
+        #Fatal
+        front="\033[7;31m[!] "
+
+    print(front+message+"\033[0;37m")
+
 def lookup(a, b, c, d):
     if a:
         if b:
@@ -94,13 +121,12 @@ def drawing(contour, c1, c2, c3):
 
     return (pixelArray, width, height)
 
-def generateFrame():
+def generateSingleLayer(interval, depth,  stride=1, c1=(0, 0, 0, 0), c2=(255, 0, 0, 255), c3=(255, 255, 255, 255)):
     #initial setup
-    depth = get_depth()[0]
+    logger("Setup", 0)
     newDepth = []
     one = 0
     two = 0
-    stride = 1
 
     for h in depth:
         one += 1
@@ -119,18 +145,34 @@ def generateFrame():
             newDepth.append(line)
 
     depth = newDepth
+    logger("Modified resolution", 0)
     print(len(depth))
 
     #rgb = get_video()
     my_list = []
-
-    msd = drawing(marchingSquares(depth, 1000), (255, 255, 255), (255, 0, 0), (0, 0, 0))
+    logger("Drawing...", 0)
+    msd = drawing(marchingSquares(depth, interval), c1, c2, c3)
     my_list = msd[0]
     width = msd[1]
     height = msd[2]
 
     #generates the image
-    img = Image.new('RGB', (width, height))
+    logger("Generating...", 0)
+    img = Image.new('RGBA', (width, height))
     img.putdata(my_list)
-    img.show()
-    img.save('image.png')
+    logger("Done...", 0)
+    print()
+    return img
+
+def generateSingleFrame(interval, start, end):
+    depth = get_depth()[0]
+    layers = []
+    for i in range(start, end, interval):
+        layers.append(generateSingleLayer(i, depth, stride=8, c2=(0, 0, 0, 255), c3=generateColour((255, 15, 0, 255), (0, 15, 255, 255), (i/(end-start)))))
+
+    for i in range(1, len(layers)):
+        layers[0].paste(layers[i], (0, 0), layers[i])
+
+    return layers[0]
+
+generateSingleFrame(25, 0, 1000).show()
