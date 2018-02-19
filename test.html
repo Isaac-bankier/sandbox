@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AR sandbox</title>
+  </head>
+  <body>
+    <img id="image" src="./test.png?request=0">
+    <script>
+      counter=1;
+      function redraw() {
+        document.getElementById("image").src="./test.png?request="+counter;
+        counter++;
+      }
+      window.setInterval(redraw, 1000);
+
+    </script>
+  </body>
+</html>
