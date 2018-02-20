@@ -3,6 +3,7 @@ from PIL import Image
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import io
 
 class sandbox(object):
     def __init__(self, colourScale):
@@ -272,29 +273,58 @@ class sandbox(object):
 
         self.logger("Drawing", 3)
         for i in range(start, end, interval):
-            for square in newSquares:
-                patchSquare = self.singleSquare(square[1][0], square[1][1], square[1][2], square[1][3], i, c3=self.generateColour((float(i)/(float(end)-float(start)))))
-                patchedImage.paste(patchSquare, (square[0][0], square[0][1]), patchSquare)
+            for square in range(0, len(newSquares), 1):
+                patchSquare = self.singleSquare(newSquares[square][1][0], newSquares[square][1][1], newSquares[square][1][2], newSquares[square][1][3], i, c3=self.generateColour((float(i)/(float(end)-float(start)))))
+                patchedImage.paste(patchSquare, (newSquares[square][0][0], newSquares[square][0][1]), patchSquare)
 
         self.imageCache = patchedImage
         return patchedImage
 
 
+colourScale=[[0.0, (166,206,227,255)], [0.25, (31,120,180,255)], [0.45, (178,223,138,255)], [0.65, (51,160,44,255)], [0.85, (251,154,153,255)], [1.0, (227,26,28,255)]]
+s=sandbox(colourScale)
+
+global imageStream
+imageStream = io.BytesIO()
+global displayImage
+displayImage = bytes()
+f = open('mainMap.html', 'r')
+htmlDisplay = f.read()
+
 #image server
 class imageServer(BaseHTTPRequestHandler):
-    # GET
+    def log_request(code='-', size='-'):
+        pass
+
+    def log_message(request):
+        pass
+
     def do_GET(self):
-        #testing
         # Send response status code
-        self.send_response(200)
-        # Send headers
-        self.send_header('Content-type','text/html')
-        self.end_headers()
-        # Send message back to client
-        message = "Hello world!"
-        # Write content as utf-8 data
-        self.wfile.write(bytes(message, "utf8"))
-        #/testing
+        if self.path == "/":
+            global htmlDisplay
+            self.send_response(200)
+            # Send headers
+            self.send_header('Content-type','text/html')
+            self.end_headers()
+            # Send message back to client
+            message = htmlDisplay
+            # Write content as utf-8 data
+            self.wfile.write(bytes(message, "utf8"))
+
+        elif self.path[0:11] == "/stream.png":
+            global displayImage
+            self.send_response(200)
+            # Send headers
+            self.send_header('Content-type','image/png')
+            self.end_headers()
+            # Send message back to client
+            message = displayImage
+            # Write content as utf-8 data
+            self.wfile.write(message)
+
+        else:
+            self.send_response(404)
         return
 
 def startImageServer(serverAddr, serverPort):
@@ -306,15 +336,15 @@ def startImageServer(serverAddr, serverPort):
     serverLocation = "http://"+serverAddr + ':' + str(serverPort)
     return serverLocation
 
+print(startImageServer("127.0.0.1", 8080))
 
-    colourScale=[[0.0, (166,206,227,255)], [0.25, (31,120,180,255)], [0.45, (178,223,138,255)], [0.65, (51,160,44,255)], [0.85, (251,154,153,255)], [1.0, (227,26,28,255)]]
-    s=sandbox(colourScale)
-
-    #import cProfile
-    #cProfile.run('s.generateSingleFrame(25, 0, 1000).save("test.png")')
-    s.generateSingleFrame(100, 0, 1000, stride=8).save("test.png")
-    while True:
-        dt = datetime.now()
-        s.patchImage(100, 0, 1000, stride=8, deltaThreshold=20).save("test2.png")
-        dt2 = datetime.now()
-        s.logger(str(float(dt2.microsecond - dt.microsecond)/1000000.0), 4)
+#import cProfile
+#cProfile.run('s.generateSingleFrame(25, 0, 1000).save("test.png")')
+s.generateSingleFrame(100, 0, 1000, stride=4).save(imageStream, format="png")
+while True:
+    dt = datetime.now()
+    s.patchImage(100, 0, 1000, stride=4, deltaThreshold=20).save(imageStream, format="png")
+    displayImage = imageStream.getvalue()
+    imageStream = io.BytesIO()
+    dt2 = datetime.now()
+    s.logger(str(float(dt2.microsecond - dt.microsecond)/1000000.0), 4)
