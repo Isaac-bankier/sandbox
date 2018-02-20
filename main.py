@@ -273,9 +273,9 @@ class sandbox(object):
 
         self.logger("Drawing", 3)
         for i in range(start, end, interval):
-            for square in range(0, len(newSquares), 1):
-                patchSquare = self.singleSquare(newSquares[square][1][0], newSquares[square][1][1], newSquares[square][1][2], newSquares[square][1][3], i, c3=self.generateColour((float(i)/(float(end)-float(start)))))
-                patchedImage.paste(patchSquare, (newSquares[square][0][0], newSquares[square][0][1]), patchSquare)
+            for square in newSquares:
+                patchSquare = self.singleSquare(square[1][0], square[1][1], square[1][2], square[1][3], i, c3=self.generateColour((float(i)/(float(end)-float(start)))))
+                patchedImage.paste(patchSquare, (square[0][0], square[0][1]), patchSquare)
 
         self.imageCache = patchedImage
         return patchedImage
