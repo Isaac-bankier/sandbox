@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AR Sandbox</title>
+  </head>
+  <body>
+    <style>
+      #box {
+        height: 100%;
+        border: 10px white;
+      }
+
+      body {
+        text-align: center;
+        overflow: hidden;
+      }
+    </style>
+
+    <img id="box" src="display.jpg">
+
+    <!-- Refresh image-->
+    <script>
+      counter=1;
+      function redraw() {
+        document.getElementById("box").src="display.jpg?request="+counter;
+        counter++;
+      }
+      window.setInterval(redraw, 5000);
+
+    </script>
+  </body>
+</html>
