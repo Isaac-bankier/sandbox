@@ -1,6 +1,5 @@
 from freenect import sync_get_depth as get_depth, sync_get_video as get_video
 from PIL import Image
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import io
@@ -12,18 +11,21 @@ class sandbox(object):
         self.imageCache = None
 
     def generateColour(self, percent):
-        if percent==0.0:
-            return self.colourScale[0][1]
-        if percent==1.0:
-            return self.colourScale[len(self.colourScale)-1][1]
-
+        #if percent==0.0:
+        #    return self.colourScale[0][1]
+        #if percent==1.0:
+        #    return self.colourScale[len(self.colourScale)-1][1]
+        r = 0
+        g = 0
+        b = 0
+        a = 0
         for c in range(len(self.colourScale)):
             if self.colourScale[c][0] < percent:
                 r = int((float(self.colourScale[c][1][0]  - float(self.colourScale[c-1][1][0])) * percent) + float(self.colourScale[c-1][1][0]))
                 g = int((float(self.colourScale[c][1][1]  - float(self.colourScale[c-1][1][1])) * percent) + float(self.colourScale[c-1][1][1]))
                 b = int((float(self.colourScale[c][1][2]  - float(self.colourScale[c-1][1][2])) * percent) + float(self.colourScale[c-1][1][2]))
                 a = int((float(self.colourScale[c][1][3]  - float(self.colourScale[c-1][1][3])) * percent) + float(self.colourScale[c-1][1][3]))
-                return (r, g, b, a)
+        return (r, g, b, a)
 
     def logger(self, message, level=1):
         front=""
@@ -193,7 +195,7 @@ class sandbox(object):
         self.depthCache = depth
         layers = []
         for i in range(start, end, interval):
-            layers.append(self.generateSingleLayer(i, depth, c3=self.generateColour((float(i)/(float(end)-float(start))))))
+            layers.append(self.generateSingleLayer(i, depth, c3=self.generateColour(((float(i)-float(start))/(float(end)-float(start))))))
 
         for i in range(1, len(layers)):
             layers[0].paste(layers[i], (0, 0), layers[i])
@@ -272,9 +274,10 @@ class sandbox(object):
                 continue
 
         self.logger("Drawing", 3)
-        for i in range(start, end, interval):
-            for square in newSquares:
-                patchSquare = self.singleSquare(square[1][0], square[1][1], square[1][2], square[1][3], i, c3=self.generateColour((float(i)/(float(end)-float(start)))))
+
+        for square in newSquares:
+            for i in range(start, end, interval):
+                patchSquare = self.singleSquare(square[1][0], square[1][1], square[1][2], square[1][3], i, c3=self.generateColour(((float(i)-float(start))/(float(end)-float(start)))))
                 patchedImage.paste(patchSquare, (square[0][0], square[0][1]), patchSquare)
 
         self.imageCache = patchedImage
@@ -282,6 +285,7 @@ class sandbox(object):
 
 
 colourScale=[[0.0, (166,206,227,255)], [0.25, (31,120,180,255)], [0.45, (178,223,138,255)], [0.65, (51,160,44,255)], [0.85, (251,154,153,255)], [1.0, (227,26,28,255)]]
+#colourScale=[[0.0, (255,0,0,255)], [0.5, (0,255,0,255)], [1.0, (0,0,255,255)]]
 s=sandbox(colourScale)
 
 global imageStream
@@ -338,13 +342,23 @@ def startImageServer(serverAddr, serverPort):
 
 print(startImageServer("127.0.0.1", 8080))
 
-#import cProfile
-#cProfile.run('s.generateSingleFrame(25, 0, 1000).save("test.png")')
-s.generateSingleFrame(100, 0, 1000, stride=4).save(imageStream, format="png")
+s.generateSingleFrame(5, 675, 750, stride=4).save(imageStream, format="png")
+displayImage = imageStream.getvalue()
+imageStream = io.BytesIO()
+
+counter = 0
+redraw = 30
 while True:
-    dt = datetime.now()
-    s.patchImage(100, 0, 1000, stride=4, deltaThreshold=20).save(imageStream, format="png")
-    displayImage = imageStream.getvalue()
-    imageStream = io.BytesIO()
-    dt2 = datetime.now()
-    s.logger(str(float(dt2.microsecond - dt.microsecond)/1000000.0), 4)
+    try:
+         if counter == redraw:
+             s.generateSingleFrame(5, 675, 750, stride=4).save(imageStream, format="png")
+             displayImage = imageStream.getvalue()
+             imageStream = io.BytesIO()
+
+         s.patchImage(5, 675, 750, stride=4, deltaThreshold=25).save(imageStream, format="png")
+         displayImage = imageStream.getvalue()
+         imageStream = io.BytesIO()
+         counter = (counter + 1) % (redraw+1)
+
+    except:
+         a = input("Error press control c to exit or enter to continue...")
