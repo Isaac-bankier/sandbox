@@ -1,0 +1,7 @@
+contourInterval;5
+startHeight;675
+endHeight;750
+stride;4
+counter;0
+redraw;150
+deltaThreshold;25

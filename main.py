@@ -11,10 +11,10 @@ class sandbox(object):
         self.imageCache = None
 
     def generateColour(self, percent):
-        #if percent==0.0:
-        #    return self.colourScale[0][1]
-        #if percent==1.0:
-        #    return self.colourScale[len(self.colourScale)-1][1]
+        if percent==0.0:
+            return self.colourScale[0][1]
+        if percent==1.0:
+            return self.colourScale[len(self.colourScale)-1][1]
         r = 0
         g = 0
         b = 0
@@ -284,17 +284,6 @@ class sandbox(object):
         return patchedImage
 
 
-colourScale=[[0.0, (166,206,227,255)], [0.25, (31,120,180,255)], [0.45, (178,223,138,255)], [0.65, (51,160,44,255)], [0.85, (251,154,153,255)], [1.0, (227,26,28,255)]]
-#colourScale=[[0.0, (255,0,0,255)], [0.5, (0,255,0,255)], [1.0, (0,0,255,255)]]
-s=sandbox(colourScale)
-
-global imageStream
-imageStream = io.BytesIO()
-global displayImage
-displayImage = bytes()
-f = open('mainMap.html', 'r')
-htmlDisplay = f.read()
-
 #image server
 class imageServer(BaseHTTPRequestHandler):
     def log_request(code='-', size='-'):
@@ -324,7 +313,7 @@ class imageServer(BaseHTTPRequestHandler):
             self.end_headers()
             # Send message back to client
             message = displayImage
-            # Write content as utf-8 data
+            # Write content
             self.wfile.write(message)
 
         else:
@@ -340,25 +329,40 @@ def startImageServer(serverAddr, serverPort):
     serverLocation = "http://"+serverAddr + ':' + str(serverPort)
     return serverLocation
 
+#defaults
+contourInterval = 5
+startHeight = 675
+endHeight = 750
+stride = 4
+counter = 0
+redraw = 150
+deltaThreshold = 25
+
+
+colourScale=[[0.0, (166,206,227,255)], [0.25, (31,120,180,255)], [0.45, (178,223,138,255)], [0.65, (51,160,44,255)], [0.85, (251,154,153,255)], [1.0, (227,26,28,255)]]
+s=sandbox(colourScale)
+imageStream = io.BytesIO()
+displayImage = bytes()
+f = open('mainMap.html', 'r')
+htmlDisplay = f.read()
+
 print(startImageServer("127.0.0.1", 8080))
 
-s.generateSingleFrame(5, 675, 750, stride=4).save(imageStream, format="png")
+s.generateSingleFrame(contourInterval, startHeight, endHeight, stride=stride).save(imageStream, format="png")
 displayImage = imageStream.getvalue()
 imageStream = io.BytesIO()
 
-counter = 0
-redraw = 30
 while True:
     try:
          if counter == redraw:
-             s.generateSingleFrame(5, 675, 750, stride=4).save(imageStream, format="png")
+             s.generateSingleFrame(contourInterval, startHeight, endHeight, stride=stride).save(imageStream, format="png")
              displayImage = imageStream.getvalue()
              imageStream = io.BytesIO()
 
-         s.patchImage(5, 675, 750, stride=4, deltaThreshold=25).save(imageStream, format="png")
+         s.patchImage(contourInterval, startHeight, endHeight, stride=stride, deltaThreshold=deltaThreshold).save(imageStream, format="png")
          displayImage = imageStream.getvalue()
          imageStream = io.BytesIO()
          counter = (counter + 1) % (redraw+1)
 
     except:
-         a = input("Error press control c to exit or enter to continue...")
+         input("Error press control c to exit or enter to continue...")
